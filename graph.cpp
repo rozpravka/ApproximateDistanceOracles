@@ -1,7 +1,9 @@
 #include "graph.hpp"
 #include <boost/graph/random.hpp>
 #include <boost/random.hpp>
+#include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <iostream>
+#include <vector>
 #include <ctime>
 
 void create_graph(Graph& graph, int num_vertices, int num_edges, unsigned int seed) {
@@ -25,5 +27,39 @@ void print_graph(const Graph& graph) {
                       << get(boost::edge_weight, graph, edge(vertex, *neighboring_vertex, graph).first) << ", ";
         }
         std::cout << std::endl;
+    }
+}
+
+void run_dijkstra(const Graph& graph, Vertex start_vertex) {
+    int num_v = num_vertices(graph);
+    std::vector<Vertex> predecessors(num_v, num_v);
+    std::vector<int> distances(num_v, std::numeric_limits<int>::max());
+
+    auto indexmap = get(boost::vertex_index, graph);
+    auto weightmap = get(boost::edge_weight, graph);
+
+    dijkstra_shortest_paths(graph, start_vertex,
+        predecessor_map(boost::make_iterator_property_map(predecessors.begin(), indexmap)).
+        distance_map(boost::make_iterator_property_map(distances.begin(), indexmap)).
+        weight_map(weightmap));
+
+    std::cout << "Distances from vertex " << start_vertex << ":\n";
+    for (Vertex v = 0; v < num_v; ++v) {
+        if (distances[v] == std::numeric_limits<int>::max()) {
+            std::cout << "Vertex " << v << " is unreachable\n";
+            continue;
+        }
+        std::cout << "Total distance: " << distances[v] << " => Path: {";
+        std::vector<Vertex> path;
+        for (Vertex u = v; u != start_vertex && u != num_v; u = predecessors[u]) {
+            path.push_back(u);
+        }
+        path.push_back(start_vertex);
+        std::reverse(path.begin(), path.end());
+        for (size_t i = 0; i < path.size(); ++i) {
+            if (i > 0) std::cout << " -> ";
+            std::cout << path[i];
+        }
+        std::cout << "}" << std::endl;
     }
 }
